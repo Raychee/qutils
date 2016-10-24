@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import collections
 import json
 import logging
@@ -9,7 +7,6 @@ import socket
 import time
 from copy import copy
 from datetime import datetime, timedelta
-from itertools import izip
 from multiprocessing.dummy import Pipe, Process
 
 import pandas as pd
@@ -124,7 +121,7 @@ def update(current, to_update,
         elif update_list and is_list(cur) and is_list(up):
             len_cur, len_up = len(cur), len(up)
             uped = [c if ignore_none and u is None else update_one(c, u, deep)
-                    for c, u in izip(cur, up)]
+                    for c, u in zip(cur, up)]
             if len_cur < len_up:
                 rest = up[(len_cur - len_up):]
             elif len_cur > len_up:
