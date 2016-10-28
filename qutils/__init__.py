@@ -16,7 +16,7 @@ import yaml
 logger = logging.getLogger(__name__)
 
 
-class lazy(object):
+class lazy:
     def __init__(self, func_with_no_args):
         super(lazy, self).__init__()
         self.func = func_with_no_args
@@ -30,7 +30,7 @@ class lazy(object):
         return self.res
 
 
-class timeit(object):
+class timeit:
     def __init__(self, title='', output_fn=print):
         self.title = title
         self.output_fn = output_fn
@@ -98,7 +98,7 @@ def save_json(data, json_path):
 def is_list(obj):
     return isinstance(obj, collections.Iterable) and \
            isinstance(obj, collections.Sized) and \
-           not isinstance(obj, (basestring, collections.Mapping))
+           not isinstance(obj, (str, collections.Mapping))
 
 
 def update(current, to_update,
@@ -169,7 +169,7 @@ def all_equal(seq):
     return True
 
 
-class NumberSequence(object):
+class NumberSequence:
     def __init__(self):
         super(NumberSequence, self).__init__()
         self.reset()
@@ -177,7 +177,7 @@ class NumberSequence(object):
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         raise NotImplementedError()
 
     def reset(self):
@@ -189,13 +189,13 @@ class Fibonacci(NumberSequence):
         self.a = 0
         self.b = 1
 
-    def next(self):
+    def __next__(self):
         self.a = self.b
         self.b = self.a + self.b
         return self.a
 
 
-def parse_numeric_value(value_str):
+def numeric(value_str):
     try:
         result = yaml.load(value_str)
     except (ValueError, yaml.parser.ParserError):
@@ -204,21 +204,6 @@ def parse_numeric_value(value_str):
         return result
     else:
         raise ValueError('"{!r}" cannot be parsed into numeric value.'.format(value_str))
-
-
-def str_timedelta(timedelta):
-    secs = timedelta.total_seconds()
-    if secs < 60:
-        val, unit = secs, 'sec'
-    elif 60 <= secs < 3600:
-        val, unit = secs / 60., 'min'
-    elif 3600 <= secs < 86400:
-        val, unit = secs / 3600., 'hour'
-    else:
-        val, unit = secs / 86400., 'day'
-    if val > 1:
-        unit += 's'
-    return '{:.1f} {}'.format(val, unit)
 
 
 def to_seconds(timedelta_str):
@@ -258,7 +243,7 @@ def to_datetime(time_repr, from_datetime=None, if_invalid='use_now'):
         return time_repr
     if isinstance(time_repr, datetime):
         return pd.to_datetime(time_repr)
-    if isinstance(time_repr, basestring):
+    if isinstance(time_repr, str):
         time_repr = str(time_repr)
         if time_repr.lower() == 'now':
             return get_from_datetime()
@@ -277,7 +262,7 @@ def to_datetime(time_repr, from_datetime=None, if_invalid='use_now'):
 
 
 def ensure_timestamps(timestamps, func_get_latest_time=None, if_fail='ignore'):
-    t_is_not_timestamp = [t is None or isinstance(t, (basestring, pd.Timedelta, timedelta))
+    t_is_not_timestamp = [t is None or isinstance(t, (str, pd.Timedelta, timedelta))
                           for t in timestamps]
     if any(t_is_not_timestamp):
         if t_is_not_timestamp[-1]:

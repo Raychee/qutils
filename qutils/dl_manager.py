@@ -53,7 +53,7 @@ class Ticket(JsonModel):
     }
 
 
-class DLManager(object):
+class DLManager:
     PREFIX = 'https://dlmanager.paypalcorp.com/API'
     session = requests.Session()
 
@@ -142,7 +142,7 @@ class DLManager(object):
     def delete_dl(self, dl_names):
         url = self.PREFIX + '/DL/delete/{}/{}'.format(self.executor, self.token)
         dl_names = self._ensure_name_list(dl_names)
-        if any(not isinstance(d, basestring) for d in dl_names):
+        if any(not isinstance(d, str) for d in dl_names):
             raise ValueError('the dl_names must be one or a list of DLs')
         resp = self.session.post(url, data=json.dumps(dl_names),
                                  headers={'Content-Type': 'application/json'}, verify=False)
@@ -172,7 +172,7 @@ class DLManager(object):
 
     def _process_dl_users(self, url, dl_name, users, log_action, log_action_prep):
         users = self._ensure_name_list(users)
-        if any(not isinstance(u, basestring) for u in users):
+        if any(not isinstance(u, str) for u in users):
             raise ValueError('the users must be one or a list of corp ids')
         resp = self.session.post(url, data=json.dumps(users),
                                  headers={'Content-Type': 'application/json'}, verify=False)
