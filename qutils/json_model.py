@@ -6,11 +6,10 @@ from datetime import datetime
 from . import is_list
 
 
-class JsonModel(object):
+class JsonModel:
     __fields__ = {}
-    __values__ = {}
 
-    class Converter(object):
+    class Converter:
         valid_types = ()
 
         def json2value(self, json_obj):
@@ -51,11 +50,12 @@ class JsonModel(object):
 
     def __init__(self, *args, **kwargs):
         super(JsonModel, self).__init__()
+        self.__values__ = {}
         if len(args) > 0:
             json_obj = args[0]
         else:
             json_obj = {}
-        if isinstance(json_obj, basestring):
+        if isinstance(json_obj, str):
             json_obj = json.loads(json_obj)
         self.from_dict(json_obj)
         self.from_dict(kwargs)
