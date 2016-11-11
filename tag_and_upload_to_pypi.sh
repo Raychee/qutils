@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+
+VERSION=$(grep ^VERSION setup.py | sed "s/^VERSION = '//" | sed "s/'$//")
+COMMENT=$(git log -1 --pretty=%B | cat)
+
+git tag ${VERSION} -m "${COMMENT}" && \
+git push origin --tags && \
+python setup.py register -r pypi && \
+python setup.py sdist upload -r pypi

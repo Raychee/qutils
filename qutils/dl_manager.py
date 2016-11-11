@@ -139,7 +139,7 @@ class DLManager:
                               {requests.codes.server_error: 'invalid executor / invalid token / server errors'})
         return [DL(d) for d in resp.json()]
 
-    def delete_dl(self, dl_names):
+    def remove_dl(self, dl_names):
         url = self.PREFIX + '/DL/delete/{}/{}'.format(self.executor, self.token)
         dl_names = self._ensure_name_list(dl_names)
         if any(not isinstance(d, str) for d in dl_names):
