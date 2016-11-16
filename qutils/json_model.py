@@ -50,10 +50,7 @@ class JsonModel:
 
     def __init__(self, *args, **kwargs):
         super(JsonModel, self).__init__()
-        setattr_fn = self.__setattr__
-        del self.__setattr__
         self.__values__ = {}
-        self.__setattr__ = setattr_fn
         if len(args) > 0:
             json_obj = args[0]
         else:
@@ -113,7 +110,10 @@ class JsonModel:
         return self.__getitem__(key)
 
     def __setattr__(self, key, value):
-        return self.__setitem__(key, value)
+        if key in ('__values__', '__fields__'):
+            return super(JsonModel, self).__setattr__(key, value)
+        else:
+            return self.__setitem__(key, value)
 
     def __repr__(self):
         return '{}({})'.format(type(self).__name__,

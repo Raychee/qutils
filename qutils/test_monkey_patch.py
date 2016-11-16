@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import pandas as pd
 
-from qutils.monkey_patch import timedelta_to_human
+from .monkey_patch import timedelta_to_human
 
 
 class TestMonkeyPatch(TestCase):
