@@ -73,3 +73,18 @@ class TestJsonModel(TestCase):
             }
         }))
 
+    def test_invalid_json_object(self):
+        with self.assertRaises(TypeError):
+            ToyModel(None)
+        with self.assertRaises(TypeError):
+            ToyModel({
+                'sstrf': 'this is a sub-model string field',
+                'sintf': 98765,
+                'sfloatf': 0.618,
+                'sdatetimef': '1990-07-09T23:42:55.325',
+                'modelf': 'this is an invalid field value'
+            })
+        with self.assertRaises(KeyError):
+            print(self.toy_model.not_exist_field)
+
+

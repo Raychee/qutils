@@ -49,19 +49,28 @@ class JsonModel:
             return isinstance(obj, self.model_cls)
 
     def __init__(self, *args, **kwargs):
-        super(JsonModel, self).__init__()
-        self.__values__ = {}
+        super_self = super(JsonModel, self)
+        super_self.__init__()
+        super_self.__setattr__('__values__', {})
         if len(args) > 0:
             json_obj = args[0]
         else:
             json_obj = {}
         if isinstance(json_obj, str):
-            json_obj = json.loads(json_obj)
+            try:
+                json_obj = json.loads(json_obj)
+            except json.JSONDecodeError:
+                raise TypeError('json object is not valid (dict-like or json string) for conversion to model: {!r}'
+                                .format(json_obj))
         self.from_dict(json_obj)
         self.from_dict(kwargs)
 
     def from_dict(self, dict_obj):
-        for key, value in dict_obj.items():
+        try:
+            kvs = dict_obj.items()
+        except AttributeError:
+            raise TypeError('json object is not valid (dict-like) for conversion to model: {!r}'.format(dict_obj))
+        for key, value in kvs:
             try:
                 self.__setitem__(key, value)
             except KeyError:
@@ -110,10 +119,7 @@ class JsonModel:
         return self.__getitem__(key)
 
     def __setattr__(self, key, value):
-        if key in ('__values__', '__fields__'):
-            return super(JsonModel, self).__setattr__(key, value)
-        else:
-            return self.__setitem__(key, value)
+        return self.__setitem__(key, value)
 
     def __repr__(self):
         return '{}({})'.format(type(self).__name__,

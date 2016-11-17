@@ -89,14 +89,19 @@ class DLManager:
         url = self.PREFIX + '/User/properties/{}/{}/{}'.format(user_name, self.executor, self.token)
         resp = self.session.get(url, verify=False)
         self._raise_for_error(resp, 'Cannot get properties of user "{}"'.format(user_name),
-                              {requests.codes.server_error: 'invalid corp id / invalid executor / invalid token / internal server error'})
-        return User(resp.json())
+                              {requests.codes.server_error: 'invalid corp id / invalid executor / '
+                                                            'invalid token / internal server error'})
+        user_json = resp.json()
+        if user_json:
+            return User(user_json)
+        raise self.UserNotExist('User "{}" does not exist'.format(user_name))
 
     def exists_dl(self, dl_name):
         url = self.PREFIX + '/DL/exist/{}/{}/{}'.format(dl_name, self.executor, self.token)
         resp = self.session.get(url, verify=False)
         self._raise_for_error(resp, 'Cannot check if DL "{}" exists'.format(dl_name),
-                              {requests.codes.server_error: 'invalid executor / invalid token / internal server error'})
+                              {requests.codes.server_error: 'invalid executor / invalid token / '
+                                                            'internal server error'})
         return resp.text == 'true'
 
     def new_dl(self, dl_name=None, members=None, owners=None, ticket=None):
@@ -111,6 +116,8 @@ class DLManager:
                 ticket.dlName = dl_name
             if members is not None:
                 ticket.members = self._ensure_name_list(members)
+            else:
+                ticket.members = []
             if owners is not None:
                 ticket.owners = self._ensure_name_list(owners)
         resp = self.session.post(url, json=ticket.to_dict(), verify=False)
@@ -189,14 +196,16 @@ class DLManager:
         resp = self.session.get(url, verify=False)
         self._raise_for_error(resp, 'Cannot {} DL "{}"'.format(log_action, dl_name),
                               {requests.codes.bad_request: 'invalid DL name',
-                               requests.codes.server_error: 'invalid executor / invalid token / internal server error'},
+                               requests.codes.server_error: 'invalid executor / invalid token / '
+                                                            'internal server error'},
                               dl_name)
         return resp
 
     def _get_user_related_dls(self, url, user):
         resp = self.session.get(url, verify=False)
         self._raise_for_error(resp, 'Cannot get related DLs of user "{}"'.format(user),
-                              {requests.codes.server_error: 'invalid corp id / invalid executor / invalid token / internal server error'})
+                              {requests.codes.server_error: 'invalid corp id / invalid executor / '
+                                                            'invalid token / internal server error'})
         return [DL(d) for d in resp.json()]
 
     @staticmethod
@@ -206,7 +215,8 @@ class DLManager:
         users_or_dls = [u.samAccountName if isinstance(u, User) else u for u in users_or_dls]
         return users_or_dls
 
-    def _raise_for_error(self, resp, log_error_action, code_log_reason=None, check_exists_dl=None, check_exists_dl_when=None):
+    def _raise_for_error(self, resp, log_error_action,
+                         code_log_reason=None, check_exists_dl=None, check_exists_dl_when=None):
         if resp.status_code != requests.codes.ok:
             error_cls = self.CallAPIError
             reason_message = ''
@@ -236,3 +246,7 @@ class DLManager:
     class DLNotExist(Error):
         def __init__(self, *args, **kwargs):
             super(DLManager.DLNotExist, self).__init__(*args, **kwargs)
+
+    class UserNotExist(Error):
+        def __init__(self, *args, **kwargs):
+            super(DLManager.UserNotExist, self).__init__(*args, **kwargs)
