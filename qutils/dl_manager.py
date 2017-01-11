@@ -3,7 +3,7 @@ import json
 import requests
 
 from . import is_list
-from .json_model import JsonModel
+from .models import JsonModel
 
 
 class User(JsonModel):
@@ -57,8 +57,8 @@ class DLManager:
     PREFIX = 'https://dlmanager.paypalcorp.com/API'
     session = requests.Session()
 
-    def __init__(self, executor, token, url_prefix=None):
-        super(DLManager, self).__init__()
+    def __init__(self, executor: str, token: str, url_prefix: str = None):
+        super().__init__()
         self.executor = executor
         self.token = token
         if url_prefix is not None:
@@ -236,17 +236,13 @@ class DLManager:
                                     resp.status_code, resp.reason, resp.text))
 
     class Error(Exception):
-        def __init__(self, *args, **kwargs):
-            super(DLManager.Error, self).__init__(*args, **kwargs)
+        pass
 
     class CallAPIError(Error):
-        def __init__(self, *args, **kwargs):
-            super(DLManager.CallAPIError, self).__init__(*args, **kwargs)
+        pass
 
     class DLNotExist(Error):
-        def __init__(self, *args, **kwargs):
-            super(DLManager.DLNotExist, self).__init__(*args, **kwargs)
+        pass
 
     class UserNotExist(Error):
-        def __init__(self, *args, **kwargs):
-            super(DLManager.UserNotExist, self).__init__(*args, **kwargs)
+        pass

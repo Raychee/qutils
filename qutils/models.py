@@ -6,6 +6,38 @@ from datetime import datetime
 from . import is_list
 
 
+class O:
+    def __init__(self, **attrs):
+        super().__init__()
+        self.__dict__.update(attrs)
+
+    def __getattr__(self, item):
+        try:
+            return super().__getattr__(item)
+        except AttributeError:
+            value = O()
+            self.__setattr__(item, value)
+            return value
+
+    def __call__(self, *args, **kwargs):
+        pass
+
+    def __nonzero__(self):
+        return bool(self.__dict__)
+
+    def __iter__(self):
+        return iter(self.__dict__)
+
+    def __repr__(self):
+        return '{}({})'.format(type(self).__name__,
+                               ', '.join('{}={!r}'.format(k, v) for k, v in self.__dict__.items()))
+
+    @classmethod
+    def from_dict(cls, d: dict):
+        d = {k: cls.from_dict(v) if isinstance(v, dict) else v for k, v in d.items()}
+        return cls(**d)
+
+
 class JsonModel:
     __fields__ = {}
 
@@ -25,7 +57,7 @@ class JsonModel:
         valid_types = (pd.Timestamp, datetime)
 
         def __init__(self, dt_format='%Y-%m-%dT%H:%M:%S.%f'):
-            super(JsonModel.DateTimeType, self).__init__()
+            super().__init__()
             self.dt_format = dt_format
 
         def json2value(self, time_str):
@@ -36,7 +68,7 @@ class JsonModel:
 
     class ModelType(Converter):
         def __init__(self, model_cls):
-            super(JsonModel.ModelType, self).__init__()
+            super().__init__()
             self.model_cls = model_cls
 
         def json2value(self, dict_obj):
@@ -49,7 +81,7 @@ class JsonModel:
             return isinstance(obj, self.model_cls)
 
     def __init__(self, *args, **kwargs):
-        super_self = super(JsonModel, self)
+        super_self = super()
         super_self.__init__()
         super_self.__setattr__('__values__', {})
         if len(args) > 0:

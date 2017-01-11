@@ -3,7 +3,7 @@ from unittest import TestCase
 import pandas as pd
 from qutils import deep_equal
 
-from .json_model import JsonModel
+from .models import JsonModel
 
 
 class SubToyModel(JsonModel):

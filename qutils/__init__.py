@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class lazy:
     def __init__(self, func_with_no_args):
-        super(lazy, self).__init__()
+        super().__init__()
         self.func = func_with_no_args
         self.called = False
         self.res = None
@@ -105,7 +105,7 @@ def update(current, to_update,
            deep=False, update_list=False, extend_list=False, ignore_exist=False, ignore_none=False):
     def update_mapping(current, to_update):
         current = copy(current)
-        for k, v in to_update.iteritems():
+        for k, v in to_update.items():
             if k in current:
                 current[k] = update_one(current[k], v, deep)
             else:
@@ -171,7 +171,7 @@ def all_equal(seq):
 
 class NumberSequence:
     def __init__(self):
-        super(NumberSequence, self).__init__()
+        super().__init__()
         self.reset()
 
     def __iter__(self):
