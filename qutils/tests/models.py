@@ -1,9 +1,9 @@
 from unittest import TestCase
 
 import pandas as pd
-from qutils import deep_equal
 
-from qutils.models import JsonModel
+from qutils.functions import deep_equal
+from qutils.models import JsonModel, ItemRef
 
 
 class SubToyModel(JsonModel):
@@ -88,3 +88,25 @@ class TestJsonModel(TestCase):
             print(self.toy_model.not_exist_field)
 
 
+class TestItemRef(TestCase):
+    def test_getter(self):
+        test_dict = {
+            'a': {'b': 1, 'c': 2},
+            'd': [3, 4, 5]
+        }
+        a_b = ItemRef(test_dict['a'], 'b')
+        d_2 = ItemRef(test_dict['d'], 2)
+        self.assertEqual(1, a_b.v)
+        self.assertEqual(5, d_2.v)
+
+    def test_setter(self):
+        test_dict = {
+            'a': {'b': 1, 'c': 2},
+            'd': [3, 4, 5]
+        }
+        a_b = ItemRef(test_dict['a'], 'b')
+        d_2 = ItemRef(test_dict['d'], 2)
+        a_b.v = 99
+        d_2.v = -99
+        self.assertEqual(99, test_dict['a']['b'])
+        self.assertEqual(-99, test_dict['d'][2])

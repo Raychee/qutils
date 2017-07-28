@@ -3,7 +3,7 @@ import json
 import pandas as pd
 from datetime import datetime
 
-from . import is_list
+from qutils.functions import is_list
 
 
 class O:
@@ -157,3 +157,38 @@ class JsonModel:
         return '{}({})'.format(type(self).__name__,
                                ', '.join('{}={!r}'.format(k, getattr(self, k))
                                          for k in self.__fields__ if hasattr(self, k)))
+
+
+class Ref:
+    def __init__(self, container, key):
+        super().__init__()
+        self.container = container
+        self.key = key
+
+    @property
+    def v(self):
+        raise NotImplementedError
+
+    @v.setter
+    def v(self, value):
+        raise NotImplementedError
+
+
+class ItemRef(Ref):
+    @property
+    def v(self):
+        return self.container[self.key]
+
+    @v.setter
+    def v(self, value):
+        self.container[self.key] = value
+
+
+class AttrRef(Ref):
+    @property
+    def v(self):
+        return getattr(self.container, self.key)
+
+    @v.setter
+    def v(self, value):
+        setattr(self.container, self.key, value)
