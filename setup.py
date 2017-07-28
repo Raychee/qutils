@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 
-VERSION = '0.2.6'
+VERSION = '0.2.7'
 
 
 setup(
@@ -14,5 +14,9 @@ setup(
     url='https://github.com/Raychee/qutils',
     download_url='https://github.com/Raychee/qutils/tarball/' + VERSION,
     keywords=['utils', 'common', 'dlmanager', 'json'],
-    install_requires=['pandas>=0.19', 'pyyaml>=3.12', 'requests>=2.12']
+    test_suite='qutils.tests',
+    install_requires=[
+        'pandas>=0.17.0',
+        'PyYAML>=3.12',
+    ]
 )

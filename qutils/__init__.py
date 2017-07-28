@@ -16,6 +16,41 @@ import yaml
 logger = logging.getLogger(__name__)
 
 
+class Ref:
+    def __init__(self, container, key):
+        super().__init__()
+        self.container = container
+        self.key = key
+
+    @property
+    def v(self):
+        raise NotImplementedError
+
+    @v.setter
+    def v(self, value):
+        raise NotImplementedError
+
+
+class ItemRef(Ref):
+    @property
+    def v(self):
+        return self.container[self.key]
+
+    @v.setter
+    def v(self, value):
+        self.container[self.key] = value
+
+
+class AttrRef(Ref):
+    @property
+    def v(self):
+        return getattr(self.container, self.key)
+
+    @v.setter
+    def v(self, value):
+        setattr(self.container, self.key, value)
+
+
 class lazy:
     def __init__(self, func_with_no_args):
         super().__init__()

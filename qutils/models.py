@@ -22,7 +22,7 @@ class O:
     def __call__(self, *args, **kwargs):
         pass
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.__dict__)
 
     def __iter__(self):
