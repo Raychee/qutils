@@ -2,8 +2,8 @@ import json
 
 import requests
 
-from . import is_list
-from .models import JsonModel
+from qutils.functions import is_list
+from qutils.models import JsonModel
 
 
 class User(JsonModel):
