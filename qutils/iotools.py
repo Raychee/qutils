@@ -2,13 +2,10 @@ import json
 import os
 
 import pandas as pd
+import teradata
 import yaml
 
-try:
-    import pypyodbc as pyodbc
-except ImportError:
-    import pyodbc
-pyodbc.pooling = False
+from qutils import VERSION
 
 
 def load_yaml(yaml_path):
@@ -64,7 +61,13 @@ def reverse_readline(filename, buf_size=8192):
 
 
 class Teradata(object):
-    _conn_pool = {}
+
+    pooling = True
+    method = 'odbc'
+    logging = False
+
+    _uda = None
+    _pool = {}
 
     def __init__(self, host, user_name, password, database=None, table=None):
         super(Teradata, self).__init__()
@@ -74,14 +77,18 @@ class Teradata(object):
         self.database = database
         self.table = table
 
-    def _get_conn(self):
-        conn = self._conn_pool.get((self.host, self.user_name))
-        if conn is None:
-            conn = pyodbc.connect('DRIVER={{Teradata}};DBCNAME={};UID={};PWD={};'
-                                  .format(self.host, self.user_name, self.password),
-                                  ansi=True, unicode_results=False)
-            # self._conn_pool[(self.host, self.user_name)] = conn
-        return conn
+    @property
+    def session(self):
+        session = None
+        if self.pooling:
+            session = self._pool.get((self.host, self.user_name))
+        if session is None:
+            if self._uda is None:
+                self._uda = teradata.UdaExec(appName=__name__ + '.Teradata', version=VERSION, logConsole=self.logging)
+            session = self._uda.connect(method=self.method, system=self.host,
+                                        username=self.user_name, password=self.password)
+            self._pool[(self.host, self.user_name)] = session
+        return session
 
     def query(self, query_string=None,
               select=None, distinct=False, where=None, order_by=None, ascend=True, limit=None,
@@ -99,10 +106,10 @@ class Teradata(object):
             clause_where = '' if where is None else 'WHERE {}'.format(where)
             clause_order_by = '' if order_by is None else 'ORDER BY {} {}'.format(order_by, 'ASC' if ascend else 'DESC')
             query_string = ' '.join((clause_select, clause_from, clause_where, clause_order_by)) + ';'
-        result = pd.read_sql(query_string, self._get_conn())
+        result = pd.read_sql(query_string, self.session)
         return result.rename(columns=str.upper)
 
-    def upsert(self, dataframe, on=(), database=None, table=None):
+    def upsert(self, dataframe, on=(), database=None, table=None, **kwargs):
         """
         Only for specific use.
         """
@@ -119,7 +126,7 @@ class Teradata(object):
             query_update_set_columns = list(dataframe.columns)
             for col in on:
                 query_update_set_columns.remove(col)
-            query_update_set_clause = ', '.join(col + ' = ?' for col in query_update_set_columns)
+            query_update_set_clause = ', '.join(col + ' = ?----' for col in query_update_set_columns)
             query = \
                 """
                 UPDATE {database}.{table}
@@ -141,17 +148,19 @@ class Teradata(object):
                 """.format(database=database, table=table,
                            query_insert_table_schema=query_insert_table_schema,
                            query_insert_value_param=query_insert_value_param)
-        conn = self._get_conn()
-        cursor = conn.cursor()
-        for i_row in range(dataframe.shape[0]):
-            row = dataframe.iloc[i_row]
+
+        def query_params(row):
             query_params = []
             if on:
                 query_params.extend(row[col] for col in query_update_set_columns)
                 query_params.extend(row[col] for col in on)
             query_params.extend(row)
-            cursor.execute(query, query_params)
-        conn.commit()
+            return query_params
+
+        all_query_params = [query_params(row) for index, row in database.iterrows()]
+
+        kwargs['batch'] = kwargs.get('batch', True)
+        self.session.executemany(query, all_query_params, **kwargs)
 
     def delete(self, where=None, database=None, table=None):
         """
@@ -159,8 +168,6 @@ class Teradata(object):
         """
         database = database or self.database
         table = table or self.table
-        conn = self._get_conn()
-        cursor = conn.cursor()
         if where:
             query = \
                 """
@@ -171,14 +178,10 @@ class Teradata(object):
                 """
                 DELETE FROM {database}.{table};
                 """.format(database=database, table=table)
-        cursor.execute(query)
-        conn.commit()
+        self.session.execute(query)
 
-    def commit(self, query_string):
+    def execute(self, query_string):
         """
         Only for specific use. Run arbitary command that needs commit.
         """
-        conn = self._get_conn()
-        cursor = conn.cursor()
-        cursor.execute(query_string)
-        conn.commit()
+        return self.session.execute(query_string)

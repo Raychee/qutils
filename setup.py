@@ -1,7 +1,6 @@
 from distutils.core import setup
 
-
-VERSION = '0.4.0'
+from qutils import VERSION
 
 
 setup(
@@ -18,5 +17,6 @@ setup(
     install_requires=[
         'pandas>=0.17.0',
         'PyYAML>=3.12',
+        'teradata>=15.10.0.20'
     ]
 )
