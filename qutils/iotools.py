@@ -84,10 +84,12 @@ class Teradata(object):
             session = self._pool.get((self.host, self.user_name))
         if session is None:
             if self._uda is None:
-                self._uda = teradata.UdaExec(appName=__name__ + '.Teradata', version=VERSION, logConsole=self.logging)
+                self._uda = teradata.UdaExec(appName=__name__ + '.' + type(self).__name__,
+                                             version=VERSION, logConsole=self.logging)
             session = self._uda.connect(method=self.method, system=self.host,
                                         username=self.user_name, password=self.password)
-            self._pool[(self.host, self.user_name)] = session
+            if self.pooling:
+                self._pool[(self.host, self.user_name)] = session
         return session
 
     def query(self, query_string=None,
@@ -107,7 +109,10 @@ class Teradata(object):
             clause_order_by = '' if order_by is None else 'ORDER BY {} {}'.format(order_by, 'ASC' if ascend else 'DESC')
             query_string = ' '.join((clause_select, clause_from, clause_where, clause_order_by)) + ';'
         result = pd.read_sql(query_string, self.session)
-        return result.rename(columns=str.upper)
+        if result.shape == (1, 1) and result.columns[0] == 'Request Text' and result.index[0] == 0:
+            return result.iat[0, 0]
+        else:
+            return result
 
     def upsert(self, dataframe, on=(), database=None, table=None, **kwargs):
         """
@@ -150,12 +155,12 @@ class Teradata(object):
                            query_insert_value_param=query_insert_value_param)
 
         def query_params(row):
-            query_params = []
+            params = []
             if on:
-                query_params.extend(row[col] for col in query_update_set_columns)
-                query_params.extend(row[col] for col in on)
-            query_params.extend(row)
-            return query_params
+                params.extend(row[col] for col in query_update_set_columns)
+                params.extend(row[col] for col in on)
+            params.extend(row)
+            return params
 
         all_query_params = [query_params(row) for index, row in database.iterrows()]
 
