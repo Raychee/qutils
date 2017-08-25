@@ -84,8 +84,9 @@ class Teradata(object):
             session = self._pool.get((self.host, self.user_name))
         if session is None:
             if self._uda is None:
-                self._uda = teradata.UdaExec(appName=__name__ + '.' + type(self).__name__,
-                                             version=VERSION, logConsole=self.logging)
+                self._uda = teradata.UdaExec(appName=__name__ + '.' + type(self).__name__, version=VERSION,
+                                             logConsole=self.logging, configureLogging=self.logging,
+                                             logDir='.teradata_logs')
             session = self._uda.connect(method=self.method, system=self.host,
                                         username=self.user_name, password=self.password)
             if self.pooling:
@@ -95,9 +96,6 @@ class Teradata(object):
     def query(self, query_string=None,
               select=None, distinct=False, where=None, order_by=None, ascend=True, limit=None,
               database=None, table=None):
-        """
-        Only for specific use. Run arbitary query and return a pandas table
-        """
         if query_string is None:
             if database is None: database = self.database
             if table is None: table = self.table
@@ -115,9 +113,6 @@ class Teradata(object):
             return result
 
     def upsert(self, dataframe, on=(), database=None, table=None, **kwargs):
-        """
-        Only for specific use.
-        """
         if dataframe.shape[0] == 0:
             return
         database = database or self.database
@@ -168,9 +163,6 @@ class Teradata(object):
         self.session.executemany(query, all_query_params, **kwargs)
 
     def delete(self, where=None, database=None, table=None):
-        """
-        Only for specific use. Run DELETE command.
-        """
         database = database or self.database
         table = table or self.table
         if where:
@@ -185,8 +177,5 @@ class Teradata(object):
                 """.format(database=database, table=table)
         self.session.execute(query)
 
-    def execute(self, query_string):
-        """
-        Only for specific use. Run arbitary command that needs commit.
-        """
-        return self.session.execute(query_string)
+    def execute(self, *args, **kwargs):
+        return self.session.execute(*args, **kwargs)
