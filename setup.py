@@ -1,6 +1,6 @@
 from distutils.core import setup
 
-from .qutils import VERSION
+from qutils import VERSION
 
 
 setup(
