@@ -63,19 +63,27 @@ def reverse_readline(filename, buf_size=8192):
 class Teradata(object):
 
     pooling = True
-    method = 'odbc'
-    logging = False
+
+    config = {
+        "appName": __name__ + '.Teradata',
+        "version": VERSION,
+        "runNumber": "0",
+        "configureLogging": False
+    }
 
     _uda = None
     _pool = {}
 
-    def __init__(self, host, user_name, password, database=None, table=None):
+    def __init__(self, host, user_name, password, database=None, table=None, **connect_kwargs):
         super(Teradata, self).__init__()
         self.host = host
         self.user_name = user_name
         self.password = password
         self.database = database
         self.table = table
+
+        self.connect_kwargs = connect_kwargs.copy()
+        self.connect_kwargs['method'] = self.connect_kwargs.get('method', 'odbc')
 
     @property
     def session(self):
@@ -84,11 +92,9 @@ class Teradata(object):
             session = self._pool.get((self.host, self.user_name))
         if session is None:
             if self._uda is None:
-                self._uda = teradata.UdaExec(appName=__name__ + '.' + type(self).__name__, version=VERSION,
-                                             logConsole=self.logging, configureLogging=self.logging,
-                                             logDir='.teradata_logs')
-            session = self._uda.connect(method=self.method, system=self.host,
-                                        username=self.user_name, password=self.password)
+                self._uda = teradata.UdaExec(**self.config)
+            session = self._uda.connect(system=self.host, username=self.user_name, password=self.password,
+                                        **self.connect_kwargs)
             if self.pooling:
                 self._pool[(self.host, self.user_name)] = session
         return session
