@@ -118,7 +118,7 @@ class Teradata(object):
         else:
             return result
 
-    def upsert(self, dataframe, on=(), database=None, table=None, **kwargs):
+    def upsert(self, dataframe, on=(), database=None, table=None, **kwargs):  # kwargs often contains batch=True
         if dataframe.shape[0] == 0:
             return
         database = database or self.database
@@ -163,9 +163,8 @@ class Teradata(object):
             params.extend(row)
             return params
 
-        all_query_params = [query_params(row) for index, row in database.iterrows()]
+        all_query_params = [query_params(row) for index, row in dataframe.iterrows()]
 
-        kwargs['batch'] = kwargs.get('batch', True)
         self.session.executemany(query, all_query_params, **kwargs)
 
     def delete(self, where=None, database=None, table=None):
