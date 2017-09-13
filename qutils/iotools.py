@@ -118,42 +118,37 @@ class Teradata(object):
         else:
             return result
 
-    def upsert(self, dataframe, on=(), database=None, table=None, **kwargs):  # kwargs often contains batch=True
-        if dataframe.shape[0] == 0:
+    def upsert(self, data_frame, on=(), database=None, table=None, chunk_size=None, **kwargs):  # frequent used kwargs: batch=True
+        if data_frame.shape[0] == 0:
             return
         database = database or self.database
         table = table or self.table
-        query_insert_table_schema = ', '.join(dataframe.columns)
-        query_insert_value_param = ', '.join(['?'] * dataframe.columns.size)
+        query_insert_table_schema = ', '.join(data_frame.columns)
+        query_insert_value_param = ', '.join(['?'] * data_frame.columns.size)
         if on:
             if isinstance(on, str):
                 on = (on,)
             query_update_where_clause = ' AND '.join(col + ' = ?' for col in on)
-            query_update_set_columns = list(dataframe.columns)
+            query_update_set_columns = list(data_frame.columns)
             for col in on:
                 query_update_set_columns.remove(col)
-            query_update_set_clause = ', '.join(col + ' = ?----' for col in query_update_set_columns)
+            query_update_set_clause = ', '.join(col + ' = ?' for col in query_update_set_columns)
             query = \
-                """
-                UPDATE {database}.{table}
-                    SET {query_update_set_clause}
-                    WHERE {query_update_where_clause}
-                ELSE
-                    INSERT INTO {database}.{table} ({query_insert_table_schema})
-                    VALUES ({query_insert_value_param});
-                """.format(database=database, table=table,
-                           query_update_set_clause=query_update_set_clause,
-                           query_update_where_clause=query_update_where_clause,
-                           query_insert_table_schema=query_insert_table_schema,
-                           query_insert_value_param=query_insert_value_param)
+                "UPDATE {database}.{table} " \
+                "  SET {query_update_set_clause} " \
+                "  WHERE {query_update_where_clause} " \
+                "ELSE " \
+                "  INSERT INTO {database}.{table} ({query_insert_table_schema}) " \
+                "  VALUES ({query_insert_value_param}); ".format(database=database, table=table,
+                                                                 query_update_set_clause=query_update_set_clause,
+                                                                 query_update_where_clause=query_update_where_clause,
+                                                                 query_insert_table_schema=query_insert_table_schema,
+                                                                 query_insert_value_param=query_insert_value_param)
         else:
-            query = \
-                """
-                INSERT INTO {database}.{table} ({query_insert_table_schema})
-                VALUES ({query_insert_value_param});
-                """.format(database=database, table=table,
-                           query_insert_table_schema=query_insert_table_schema,
-                           query_insert_value_param=query_insert_value_param)
+            query = "INSERT INTO {database}.{table} ({query_insert_table_schema}) " \
+                    "VALUES ({query_insert_value_param});".format(database=database, table=table,
+                                                                  query_insert_table_schema=query_insert_table_schema,
+                                                                  query_insert_value_param=query_insert_value_param)
 
         def query_params(row):
             params = []
@@ -163,23 +158,23 @@ class Teradata(object):
             params.extend(row)
             return params
 
-        all_query_params = [query_params(row) for index, row in dataframe.iterrows()]
+        if chunk_size is None:
+            chunk_size = data_frame.shape[0]
 
-        self.session.executemany(query, all_query_params, **kwargs)
+        chunk_pos = 0
+        while chunk_pos < data_frame.shape[0]:
+            data_chunk = data_frame.iloc[chunk_pos:chunk_pos + chunk_size]
+            all_query_params = [query_params(row) for index, row in data_chunk.iterrows()]
+            self.session.executemany(query, all_query_params, **kwargs)
+            chunk_pos += chunk_size
 
     def delete(self, where=None, database=None, table=None):
         database = database or self.database
         table = table or self.table
         if where:
-            query = \
-                """
-                DELETE FROM {database}.{table} WHERE {where};
-                """.format(database=database, table=table, where=where)
+            query = "DELETE FROM {database}.{table} WHERE {where};".format(database=database, table=table, where=where)
         else:
-            query = \
-                """
-                DELETE FROM {database}.{table};
-                """.format(database=database, table=table)
+            query = "DELETE FROM {database}.{table};".format(database=database, table=table)
         self.session.execute(query)
 
     def execute(self, *args, **kwargs):
