@@ -71,7 +71,6 @@ class Teradata(object):
         "configureLogging": False
     }
 
-    _uda = None
     _pool = {}
 
     def __init__(self, host, user_name, password, database=None, table=None, **connect_kwargs):
@@ -91,17 +90,15 @@ class Teradata(object):
         if self.pooling:
             session = self._pool.get((self.host, self.user_name))
         if session is None:
-            if self._uda is None:
-                self._uda = teradata.UdaExec(**self.config)
-            session = self._uda.connect(system=self.host, username=self.user_name, password=self.password,
-                                        **self.connect_kwargs)
+            session = self._new_session()
             if self.pooling:
                 self._pool[(self.host, self.user_name)] = session
         return session
 
     def query(self, query_string=None,
               select=None, distinct=False, where=None, order_by=None, ascend=True, limit=None,
-              database=None, table=None):
+              database=None, table=None,
+              **kwargs):
         if query_string is None:
             if database is None: database = self.database
             if table is None: table = self.table
@@ -112,7 +109,7 @@ class Teradata(object):
             clause_where = '' if where is None else 'WHERE {}'.format(where)
             clause_order_by = '' if order_by is None else 'ORDER BY {} {}'.format(order_by, 'ASC' if ascend else 'DESC')
             query_string = ' '.join((clause_select, clause_from, clause_where, clause_order_by)) + ';'
-        result = pd.read_sql(query_string, self.session)
+        result = self._query(query_string, **kwargs)
         if result.shape == (1, 1) and result.columns[0] == 'Request Text' and result.index[0] == 0:
             return result.iat[0, 0]
         else:
@@ -179,3 +176,18 @@ class Teradata(object):
 
     def execute(self, *args, **kwargs):
         return self.session.execute(*args, **kwargs)
+
+    def _new_session(self):
+        uda = teradata.UdaExec(**self.config)
+        return uda.connect(system=self.host, username=self.user_name, password=self.password,
+                           **self.connect_kwargs)
+
+    def _query(self, query_string, **kwargs):
+        try:
+            return pd.read_sql(query_string, self.session, **kwargs)
+        except Exception as err:
+            if self.pooling and \
+                    "(32, '[08S01] [Teradata][Unix system error]  32 Socket error - Connection reset by peer')" in str(err):
+                self._pool[(self.host, self.user_name)] = self._new_session()
+                return pd.read_sql(query_string, self.session, **kwargs)
+            raise err
