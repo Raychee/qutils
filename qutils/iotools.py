@@ -110,7 +110,7 @@ class Teradata(object):
             clause_order_by = '' if order_by is None else 'ORDER BY {} {}'.format(order_by, 'ASC' if ascend else 'DESC')
             query_string = ' '.join((clause_select, clause_from, clause_where, clause_order_by)) + ';'
         result = self._query(query_string, **kwargs)
-        if result.shape == (1, 1) and result.columns[0] == 'Request Text' and result.index[0] == 0:
+        if result.shape == (1, 1) and result.columns[0] in ('Request Text', 'RequestText') and result.index[0] == 0:
             return result.iat[0, 0]
         else:
             return result
@@ -153,7 +153,7 @@ class Teradata(object):
                 params.extend(row[col] for col in query_update_set_columns)
                 params.extend(row[col] for col in on)
             params.extend(row)
-            return params
+            return [None if pd.isnull(v) or isinstance(v, float) and pd.np.isinf(v) else v for v in params]
 
         if chunk_size is None:
             chunk_size = data_frame.shape[0]
