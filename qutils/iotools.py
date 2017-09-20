@@ -109,7 +109,7 @@ class Teradata(object):
             clause_where = '' if where is None else 'WHERE {}'.format(where)
             clause_order_by = '' if order_by is None else 'ORDER BY {} {}'.format(order_by, 'ASC' if ascend else 'DESC')
             query_string = ' '.join((clause_select, clause_from, clause_where, clause_order_by)) + ';'
-        result = self._query(query_string, **kwargs)
+        result = self._handle_execute(self._query, query_string, **kwargs)
         if result.shape == (1, 1) and result.columns[0] in ('Request Text', 'RequestText') and result.index[0] == 0:
             return result.iat[0, 0]
         else:
@@ -162,7 +162,7 @@ class Teradata(object):
         while chunk_pos < data_frame.shape[0]:
             data_chunk = data_frame.iloc[chunk_pos:chunk_pos + chunk_size]
             all_query_params = [query_params(row) for index, row in data_chunk.iterrows()]
-            self.session.executemany(query, all_query_params, **kwargs)
+            self._handle_execute(self._execute_many, query, all_query_params, **kwargs)
             chunk_pos += chunk_size
 
     def delete(self, where=None, database=None, table=None):
@@ -172,22 +172,33 @@ class Teradata(object):
             query = "DELETE FROM {database}.{table} WHERE {where};".format(database=database, table=table, where=where)
         else:
             query = "DELETE FROM {database}.{table};".format(database=database, table=table)
-        self.session.execute(query)
+        self._handle_execute(self._execute, query)
 
     def execute(self, *args, **kwargs):
-        return self.session.execute(*args, **kwargs)
+        return self._handle_execute(self._execute, *args, **kwargs)
+
+    def _handle_execute(self, execute_fn, *args, **kwargs):
+        try:
+            return execute_fn(*args, **kwargs)
+        except teradata.DatabaseError as err:
+            if self.pooling and err.code == 32 and err.sqlState == '08S01':
+                self._pool[(self.host, self.user_name)] = self._new_session()
+                return execute_fn(*args, **kwargs)
+            raise err
 
     def _new_session(self):
         uda = teradata.UdaExec(**self.config)
         return uda.connect(system=self.host, username=self.user_name, password=self.password,
                            **self.connect_kwargs)
 
-    def _query(self, query_string, **kwargs):
-        try:
-            return pd.read_sql(query_string, self.session, **kwargs)
-        except Exception as err:
-            if self.pooling and \
-                    "(32, '[08S01] [Teradata][Unix system error]  32 Socket error - Connection reset by peer')" in str(err):
-                self._pool[(self.host, self.user_name)] = self._new_session()
-                return pd.read_sql(query_string, self.session, **kwargs)
-            raise err
+    def _query(self, *args, **kwargs):
+        cursor = self.session.execute(*args, **kwargs)
+        data = cursor.fetchall()
+        result = pd.DataFrame.from_records(data, columns=[d[0] for d in cursor.description])
+        return result
+
+    def _execute_many(self, *args, **kwargs):
+        return self.session.executemany(*args, **kwargs)
+
+    def _execute(self, *args, **kwargs):
+        return self.session.execute(*args, **kwargs)
