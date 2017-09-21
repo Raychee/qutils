@@ -177,6 +177,12 @@ class Teradata(object):
     def execute(self, *args, **kwargs):
         return self._handle_execute(self._execute, *args, **kwargs)
 
+    def __repr__(self):
+        kwargs = [('host', self.host), ('user_name', self.user_name), ('password', self.password),
+                  ('database', self.database), ('table', self.table)]
+        kwargs.extend(self.connect_kwargs.items())
+        return '{}({})'.format(type(self).__name__, ', '.join('{}={!r}'.format(k, v) for k, v in kwargs))
+
     def _handle_execute(self, execute_fn, *args, **kwargs):
         try:
             return execute_fn(*args, **kwargs)
