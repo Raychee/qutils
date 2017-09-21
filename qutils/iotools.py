@@ -109,11 +109,7 @@ class Teradata(object):
             clause_where = '' if where is None else 'WHERE {}'.format(where)
             clause_order_by = '' if order_by is None else 'ORDER BY {} {}'.format(order_by, 'ASC' if ascend else 'DESC')
             query_string = ' '.join((clause_select, clause_from, clause_where, clause_order_by)) + ';'
-        result = self._handle_execute(self._query, query_string, **kwargs)
-        if result.shape == (1, 1) and result.columns[0] in ('Request Text', 'RequestText') and result.index[0] == 0:
-            return result.iat[0, 0]
-        else:
-            return result
+        return self._handle_execute(self._query, query_string, **kwargs)
 
     def upsert(self, data_frame, on=(), database=None, table=None, chunk_size=None, **kwargs):  # frequent used kwargs: batch=True
         if data_frame.shape[0] == 0:
@@ -194,13 +190,15 @@ class Teradata(object):
 
     def _new_session(self):
         uda = teradata.UdaExec(**self.config)
-        return uda.connect(system=self.host, username=self.user_name, password=self.password,
-                           **self.connect_kwargs)
+        return uda.connect(system=self.host, username=self.user_name, password=self.password, **self.connect_kwargs)
 
     def _query(self, *args, **kwargs):
         cursor = self.session.execute(*args, **kwargs)
         data = cursor.fetchall()
-        result = pd.DataFrame.from_records(data, columns=[d[0] for d in cursor.description])
+        if len(cursor.description) == 1 and cursor.description[0][0] in ('RequestText', 'Request Text'):
+            result = ''.join(row.values[0] for row in data)
+        else:
+            result = pd.DataFrame.from_records(data, columns=[d[0] for d in cursor.description])
         return result
 
     def _execute_many(self, *args, **kwargs):

@@ -3,6 +3,7 @@ from setuptools import setup, find_packages
 
 VERSION = ''
 
+# Get version number
 with open('qutils/__init__.py') as f:
     exec(f.readline())
 
@@ -29,7 +30,7 @@ setup(
     ],
     url='https://github.com/Raychee/qutils',
     download_url='https://github.com/Raychee/qutils/tarball/' + VERSION,
-    keywords=['utils', 'common', 'dlmanager', 'json'],
+    keywords=['utils', 'common', 'dlmanager', 'json', 'teradata'],
     test_suite='qutils.tests',
     install_requires=[
         'pandas>=0.17.0',
