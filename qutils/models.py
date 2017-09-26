@@ -173,6 +173,9 @@ class Ref:
     def v(self, value):
         raise NotImplementedError
 
+    def __str__(self):
+        return str(self.v)
+
 
 class ItemRef(Ref):
     @property

@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import teradata
 import yaml
+from teradata import DatabaseError
 
 from qutils import VERSION
 
@@ -182,7 +183,7 @@ class Teradata(object):
     def _handle_execute(self, execute_fn, *args, **kwargs):
         try:
             return execute_fn(*args, **kwargs)
-        except teradata.DatabaseError as err:
+        except DatabaseError as err:
             if self.pooling and err.code == 32 and err.sqlState == '08S01':
                 self._pool[(self.host, self.user_name)] = self._new_session()
                 return execute_fn(*args, **kwargs)
