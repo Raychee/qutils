@@ -105,7 +105,8 @@ class Teradata(object):
             if table is None: table = self.table
             clause_select = 'SELECT {} {} {}'.format('DISTINCT' if distinct else '',
                                                      '' if limit is None else 'TOP {}'.format(limit),
-                                                     '*' if select is None else select)
+                                                     '*' if select is None else
+                                                     ', '.join(select) if isinstance(select, list) else select)
             clause_from = 'FROM {}.{}'.format(database, table)
             clause_where = '' if where is None else 'WHERE {}'.format(where)
             clause_order_by = '' if order_by is None else 'ORDER BY {} {}'.format(order_by, 'ASC' if ascend else 'DESC')
@@ -190,13 +191,14 @@ class Teradata(object):
             raise err
 
     def _new_session(self):
+        safe_password = self.password.replace('$', '$$')
         uda = teradata.UdaExec(**self.config)
-        return uda.connect(system=self.host, username=self.user_name, password=self.password, **self.connect_kwargs)
+        return uda.connect(system=self.host, username=self.user_name, password=safe_password, **self.connect_kwargs)
 
     def _query(self, *args, **kwargs):
         cursor = self.session.execute(*args, **kwargs)
         data = cursor.fetchall()
-        if len(cursor.description) == 1 and cursor.description[0][0] in ('RequestText', 'Request Text'):
+        if cursor.description and len(cursor.description) == 1 and cursor.description[0][0] in ('RequestText', 'Request Text'):
             result = ''.join(row.values[0] for row in data)
         else:
             result = pd.DataFrame.from_records(data, columns=[d[0] for d in cursor.description])
