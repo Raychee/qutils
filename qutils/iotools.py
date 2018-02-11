@@ -153,7 +153,7 @@ class Teradata(object):
             params.extend(row)
             return [None if pd.isnull(v) or isinstance(v, float) and pd.np.isinf(v) else v for v in params]
 
-        if chunk_size is None:
+        if not chunk_size:
             chunk_size = data_frame.shape[0]
 
         chunk_pos = 0
@@ -174,6 +174,24 @@ class Teradata(object):
 
     def execute(self, *args, **kwargs):
         return self._handle_execute(self._execute, *args, **kwargs)
+
+    def execute_sql(self, sql):
+        sql_lines = (line.lstrip() for line in sql.split('\n'))
+        sql_lines = (line for line in sql_lines if not line.startswith('--'))
+        sql = '\n'.join(sql_lines)
+        sql = sql.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ')
+        sql_lines = sql.split(';')
+        for sql_line in sql_lines[:-1]:
+            self._handle_execute(self._execute, sql_line)
+        if sql_lines:
+            return self._handle_execute(self._query, sql_lines[-1])
+        else:
+            return pd.DataFrame()
+
+    def execute_file(self, file_name):
+        with open(file_name, 'r') as f:
+            sql = f.read()
+        return self.execute_sql(sql)
 
     def __repr__(self):
         kwargs = [('host', self.host), ('user_name', self.user_name), ('password', self.password),
@@ -200,8 +218,10 @@ class Teradata(object):
         data = cursor.fetchall()
         if cursor.description and len(cursor.description) == 1 and cursor.description[0][0] in ('RequestText', 'Request Text'):
             result = ''.join(row.values[0] for row in data)
-        else:
+        elif cursor.description:
             result = pd.DataFrame.from_records(data, columns=[d[0] for d in cursor.description])
+        else:
+            result = pd.DataFrame()
         return result
 
     def _execute_many(self, *args, **kwargs):
